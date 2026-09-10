@@ -1,6 +1,7 @@
 package dev.daika.davy.data.api
 
 import dev.daika.davy.data.model.AnimeVideoDto
+import dev.daika.davy.data.model.AnimeGenresResponseDto
 import dev.daika.davy.data.model.DetailAnimeDto
 import dev.daika.davy.data.model.SearchAnimeDto
 import dev.daika.davy.data.model.YummyFeed
@@ -29,4 +30,7 @@ interface YummyApi {
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int = 20
     ): List<SearchAnimeDto>
+
+    @GET("/anime/genres")
+    suspend fun getAnimeGenres(): AnimeGenresResponseDto
 }
