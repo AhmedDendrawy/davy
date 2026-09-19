@@ -39,7 +39,7 @@ focus-based navigation and remote-friendly controls.
 
 - [x] Current season anime browsing
 - [x] Built-in player
-- [ ] Search ([#3](https://github.com/AsfhtgkDavid/davy/issues/3))
+- [x] Search ([#3](https://github.com/AsfhtgkDavid/davy/issues/3))
 - [ ] Local watch history
 - [ ] Integration with MyAnimeList and other watchlists
 - [ ] Integration with other anime aggregators
