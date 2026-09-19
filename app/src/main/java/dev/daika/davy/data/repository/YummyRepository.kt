@@ -89,7 +89,7 @@ class YummyRepository @Inject constructor(
         if (!cache_file.exists()) return null
         val raw = cache_file.inputStream()
         return try {
-            val cached = json.decodeFromStream<GenresDiskCache>(raw)
+            val cached = raw.use { json.decodeFromStream<GenresDiskCache>(it) }
             if (System.currentTimeMillis() - cached.savedAtMillis > GENRES_CACHE_TTL_MILLIS) {
                 cache_file.delete()
                 null
@@ -117,8 +117,7 @@ class YummyRepository @Inject constructor(
                 )
             }
         )
-
-        json.encodeToStream(payload, File(cache, "genres.json").outputStream())
+        File(cache, "genres.json").outputStream().use { json.encodeToStream(payload, it) }
     }
 
     @Serializable
