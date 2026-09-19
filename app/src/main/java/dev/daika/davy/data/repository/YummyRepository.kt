@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
+import dev.daika.davy.domain.entity.AnimeFilterState
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
@@ -65,13 +66,13 @@ class YummyRepository @Inject constructor(
         }
     }
 
-    fun searchAnime(query: String) = Pager(
+    fun searchAnime(query: String, filter: AnimeFilterState) = Pager(
         config = PagingConfig(
             pageSize = 20,
             initialLoadSize = 20,
             enablePlaceholders = false
         ),
-        pagingSourceFactory = { YummySearchPagingSource(yummyApi, query) }
+        pagingSourceFactory = { YummySearchPagingSource(yummyApi, query, filter) }
     ).flow
 
     suspend fun getAnimeGenres(): List<AnimeGenreFilter> {

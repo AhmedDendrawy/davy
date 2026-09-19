@@ -27,6 +27,13 @@ interface YummyApi {
     @GET("/anime")
     suspend fun searchAnime(
         @Query("q") query: String,
+        @Query("genres") selectedGenres: Set<String> = emptySet(),
+        @Query("exclude_genres") excludedGenres: Set<String> = emptySet(),
+        @Query("types") selectedTypes: Set<String> = emptySet(),
+        @Query("status") selectedStatuses: Set<String> = emptySet(),
+        @Query("to_year") yearTo: Int? = null,
+        @Query("from_year") yearFrom: Int? = null,
+        @Query("sort") selectedSort: String? = null,
         @Query("offset") offset: Int = 0,
         @Query("limit") limit: Int = 20
     ): List<SearchAnimeDto>

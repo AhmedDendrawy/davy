@@ -1,4 +1,4 @@
-package dev.daika.davy.ui.screens.search
+package dev.daika.davy.domain.entity
 
 data class FilterOption(
     val id: String,
@@ -16,12 +16,12 @@ data class AnimeFilterState(
 ) {
     fun hasActiveFilters(): Boolean =
         selectedGenres.isNotEmpty() ||
-        excludedGenres.isNotEmpty() ||
-        selectedTypes.isNotEmpty() ||
-        selectedStatuses.isNotEmpty() ||
-        yearFrom != null ||
-        yearTo != null ||
-        (selectedSort != null && selectedSort != "none")
+                excludedGenres.isNotEmpty() ||
+                selectedTypes.isNotEmpty() ||
+                selectedStatuses.isNotEmpty() ||
+                yearFrom != null ||
+                yearTo != null ||
+                (selectedSort != null && selectedSort != "none")
 }
 
 val ALL_GENRES = emptyList<FilterOption>()
@@ -56,17 +56,3 @@ val ALL_YEARS = listOf(FilterOption("none", "Any")) + (2026 downTo 1980).map {
     FilterOption(it.toString(), it.toString())
 }
 
-fun formatSelectionHint(
-    selectedIds: Set<String>,
-    options: List<FilterOption>,
-    defaultHint: String
-): String {
-    if (selectedIds.isEmpty()) return defaultHint
-    val selectedTitles = options.filter { it.id in selectedIds }.map { it.title }
-    return when {
-        selectedTitles.isEmpty() -> defaultHint
-        selectedTitles.size == 1 -> selectedTitles.first()
-        selectedTitles.size == 2 -> selectedTitles.joinToString(", ")
-        else -> "${selectedTitles.take(2).joinToString(", ")} (+${selectedTitles.size - 2})"
-    }
-}

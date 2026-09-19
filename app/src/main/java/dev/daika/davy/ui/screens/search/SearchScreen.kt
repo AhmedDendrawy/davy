@@ -31,9 +31,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
@@ -65,8 +67,16 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import dev.daika.davy.R
+import dev.daika.davy.domain.entity.ALL_GENRES
+import dev.daika.davy.domain.entity.ALL_SORT_OPTIONS
+import dev.daika.davy.domain.entity.ALL_STATUSES
+import dev.daika.davy.domain.entity.ALL_TYPES
+import dev.daika.davy.domain.entity.ALL_YEARS
 import dev.daika.davy.domain.entity.Anime
+import dev.daika.davy.domain.entity.AnimeFilterState
+import dev.daika.davy.domain.entity.FilterOption
 import dev.daika.davy.ui.common.AnimeItem
+import dev.daika.davy.utils.formatSelectionHint
 import dev.daika.davy.utils.handleDPadKeyEvents
 import dev.daika.davy.utils.ifElse
 import kotlinx.serialization.Serializable
@@ -77,11 +87,11 @@ fun SearchScreen(
     searchScreenViewModel: SearchScreenViewModel = hiltViewModel()
 ) {
     val lazyPagingItems = searchScreenViewModel.pagedItems.collectAsLazyPagingItems()
-    val genreOptions by searchScreenViewModel.genreOptions.collectAsState()
+    val genreOptions by searchScreenViewModel.genreOptions.collectAsStateWithLifecycle()
 
-    var searchQuery by remember { mutableStateOf("") }
+    val searchQuery by searchScreenViewModel.searchQuery.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
-    var filterState by remember { mutableStateOf(AnimeFilterState()) }
+    val filterState by searchScreenViewModel.filterState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -91,13 +101,12 @@ fun SearchScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
+            TextField(
                 value = searchQuery,
                 onValueChange = {
-                    searchQuery = it
-                    searchScreenViewModel.updateSearchQuery(searchQuery)
+                    searchScreenViewModel.updateSearchQuery(it)
                 },
                 keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Search
@@ -107,40 +116,43 @@ fun SearchScreen(
                         keyboardController?.hide()
                     }
                 ),
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                searchQuery = ""
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear search query",
-                            )
-                        }
-                    }
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                    focusedContainerColor = MaterialTheme.colorScheme.inverseSurface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier
                     .weight(1f)
-                    .padding(bottom = 16.dp)
-                    .clip(MaterialTheme.shapes.medium),
+                    .height(54.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .onFocusChanged {
+                        if (it.isFocused)
+                            keyboardController?.hide()
+                    },
+                textStyle = MaterialTheme.typography.titleMedium
             )
+            if (searchQuery.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        searchScreenViewModel.updateSearchQuery("")
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear search query",
+                    )
+                }
+            }
             AnimeFilterPanel(
                 filterState = filterState,
                 genreOptions = genreOptions,
-                onFilterStateChange = { filterState = it }
+                onFilterStateChange = { searchScreenViewModel.updateFilterState(it) }
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (searchQuery.isNotBlank())
+        if (searchQuery.isNotBlank() || filterState.hasActiveFilters())
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 150.dp),
                 modifier = Modifier.fillMaxSize(),
@@ -219,128 +231,133 @@ fun AnimeFilterPanel(
         LaunchedEffect(Unit) {
             focusRequester.requestFocus()
         }
-        Column(
-            modifier = modifier
-                .width(320.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    RoundedCornerShape(8.dp)
-                )
-                .padding(12.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { showFilter = false },
-                    modifier = Modifier.focusRequester(focusRequester)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_filter_alt_24),
-                        contentDescription = "Collapse filters",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+        Popup(
+            alignment = Alignment.TopEnd,
+            properties = PopupProperties(focusable = true),
+            onDismissRequest = { showFilter = false }) {
+            Column(
+                modifier = modifier
+                    .width(320.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp)
                     )
-                }
-                Text(
-                    text = "FILTERS",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                if (filterState.hasActiveFilters()) {
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(12.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(
-                        onClick = { onFilterStateChange(AnimeFilterState()) }
+                        onClick = { showFilter = false },
+                        modifier = Modifier.focusRequester(focusRequester)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Reset all",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            painter = painterResource(R.drawable.baseline_filter_alt_24),
+                            contentDescription = "Collapse filters",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                } else {
-                    Spacer(modifier = Modifier.size(40.dp))
+                    Text(
+                        text = "FILTERS",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (filterState.hasActiveFilters()) {
+                        IconButton(
+                            onClick = { onFilterStateChange(AnimeFilterState()) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Reset all",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(40.dp))
+                    }
                 }
-            }
 
-            FilterSection(
-                title = "Include genres",
-                hint = formatSelectionHint(
-                    selectedIds = filterState.selectedGenres,
-                    options = genreOptions,
-                    defaultHint = "Select genres to include"
-                ),
-                icon = { FilterIcon(Icons.Default.Add) },
-                onClick = { activePopup = ActiveFilterPopup.INCLUDE_GENRES }
-            )
-            FilterSection(
-                title = "Exclude genres",
-                hint = formatSelectionHint(
-                    selectedIds = filterState.excludedGenres,
-                    options = genreOptions,
-                    defaultHint = "Select genres to exclude"
-                ),
-                icon = { FilterIcon(Icons.Default.Add) },
-                onClick = { activePopup = ActiveFilterPopup.EXCLUDE_GENRES }
-            )
-            FilterSection(
-                title = "Anime type",
-                hint = formatSelectionHint(
-                    selectedIds = filterState.selectedTypes,
-                    options = ALL_TYPES,
-                    defaultHint = "Select anime type"
-                ),
-                icon = { FilterIcon(Icons.Default.Add) },
-                onClick = { activePopup = ActiveFilterPopup.TYPE }
-            )
-            FilterSection(
-                title = "Anime status",
-                hint = formatSelectionHint(
-                    selectedIds = filterState.selectedStatuses,
-                    options = ALL_STATUSES,
-                    defaultHint = "Select anime status"
-                ),
-                icon = { FilterIcon(Icons.Default.Add) },
-                onClick = { activePopup = ActiveFilterPopup.STATUS }
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = "Year",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyMedium
+                FilterSection(
+                    title = "Include genres",
+                    hint = formatSelectionHint(
+                        selectedIds = filterState.selectedGenres,
+                        options = genreOptions,
+                        defaultHint = "Select genres to include"
+                    ),
+                    icon = { FilterIcon(Icons.Default.Add) },
+                    onClick = { activePopup = ActiveFilterPopup.INCLUDE_GENRES }
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterInputField(
-                        hint = filterState.yearFrom?.let { "from $it" } ?: "from",
-                        modifier = Modifier.weight(1f),
-                        onClick = { activePopup = ActiveFilterPopup.YEAR_FROM }
-                    )
-                    FilterInputField(
-                        hint = filterState.yearTo?.let { "to $it" } ?: "to",
-                        modifier = Modifier.weight(1f),
-                        onClick = { activePopup = ActiveFilterPopup.YEAR_TO }
-                    )
-                }
-            }
+                FilterSection(
+                    title = "Exclude genres",
+                    hint = formatSelectionHint(
+                        selectedIds = filterState.excludedGenres,
+                        options = genreOptions,
+                        defaultHint = "Select genres to exclude"
+                    ),
+                    icon = { FilterIcon(Icons.Default.Add) },
+                    onClick = { activePopup = ActiveFilterPopup.EXCLUDE_GENRES }
+                )
+                FilterSection(
+                    title = "Anime type",
+                    hint = formatSelectionHint(
+                        selectedIds = filterState.selectedTypes,
+                        options = ALL_TYPES,
+                        defaultHint = "Select anime type"
+                    ),
+                    icon = { FilterIcon(Icons.Default.Add) },
+                    onClick = { activePopup = ActiveFilterPopup.TYPE }
+                )
+                FilterSection(
+                    title = "Anime status",
+                    hint = formatSelectionHint(
+                        selectedIds = filterState.selectedStatuses,
+                        options = ALL_STATUSES,
+                        defaultHint = "Select anime status"
+                    ),
+                    icon = { FilterIcon(Icons.Default.Add) },
+                    onClick = { activePopup = ActiveFilterPopup.STATUS }
+                )
 
-            FilterSection(
-                title = "Sort by",
-                hint = ALL_SORT_OPTIONS.find { it.id == filterState.selectedSort }?.title
-                    ?: "Relevance",
-                icon = { FilterIcon(painterResource(R.drawable.outline_sort_24)) },
-                onClick = { activePopup = ActiveFilterPopup.SORT }
-            )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Year",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterInputField(
+                            hint = filterState.yearFrom?.let { "from $it" } ?: "from",
+                            modifier = Modifier.weight(1f),
+                            onClick = { activePopup = ActiveFilterPopup.YEAR_FROM }
+                        )
+                        FilterInputField(
+                            hint = filterState.yearTo?.let { "to $it" } ?: "to",
+                            modifier = Modifier.weight(1f),
+                            onClick = { activePopup = ActiveFilterPopup.YEAR_TO }
+                        )
+                    }
+                }
+
+                FilterSection(
+                    title = "Sort by",
+                    hint = ALL_SORT_OPTIONS.find { it.id == filterState.selectedSort }?.title
+                        ?: "Relevance",
+                    icon = { FilterIcon(painterResource(R.drawable.outline_sort_24)) },
+                    onClick = { activePopup = ActiveFilterPopup.SORT }
+                )
+            }
         }
     }
 

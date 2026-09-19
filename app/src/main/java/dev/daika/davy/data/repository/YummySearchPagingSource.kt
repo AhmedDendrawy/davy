@@ -4,13 +4,15 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import dev.daika.davy.data.api.YummyApi
 import dev.daika.davy.domain.entity.Anime
+import dev.daika.davy.domain.entity.AnimeFilterState
 
 class YummySearchPagingSource(
     private val yummyApi: YummyApi,
-    private val query: String
+    private val query: String,
+    private val filter: AnimeFilterState
 ) : PagingSource<Int, Anime>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Anime> {
-        if (query.isBlank())
+        if (query.isBlank() && !filter.hasActiveFilters())
             return LoadResult.Page(
                 data = emptyList(),
                 prevKey = null,
@@ -20,6 +22,13 @@ class YummySearchPagingSource(
         return try {
             val response = yummyApi.searchAnime(
                 query = query,
+                selectedGenres = filter.selectedGenres,
+                excludedGenres = filter.excludedGenres,
+                selectedTypes = filter.selectedTypes,
+                selectedStatuses = filter.selectedStatuses,
+                yearFrom = filter.yearFrom,
+                yearTo = filter.yearTo,
+                selectedSort = filter.selectedSort?.takeIf { it != "none" },
                 offset = (page - 1) * params.loadSize,
                 limit = params.loadSize
             ).map { it.toEntity() }
