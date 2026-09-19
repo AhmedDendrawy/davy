@@ -1,0 +1,12 @@
+Added:
+- Search filtering
+
+Changed:
+- Prevented automatic on-screen keyboard popup on search field focus; keyboard now opens only on OK press
+- Improved player scrubbing and seeking consistency
+
+Optimized:
+- Anime details caching performance
+
+Fixed:
+- Minor bug fixes and stability improvements
