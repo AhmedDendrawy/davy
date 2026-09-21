@@ -395,7 +395,7 @@ fun PlayerControls(
                 )
 
                 VideoPlayerControllerIndicator(
-                    modifier = Modifier.focusRequester(focusRequester),
+                    modifier = Modifier.focusRequester(focusRequester).padding(horizontal = 2.dp),
                     isPlaying = isPlaying,
                     currentProgress = currentPosition,
                     totalDuration = videoDuration,
