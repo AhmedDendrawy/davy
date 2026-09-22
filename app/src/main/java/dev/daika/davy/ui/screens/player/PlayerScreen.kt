@@ -89,7 +89,11 @@ fun PlayerScreen(playerScreenViewModel: PlayerScreenViewModel = hiltViewModel())
         }
 
         is PlayerScreenUiState.Success -> {
-            val playerData = (uiState as PlayerScreenUiState.Success).playerData
+            val successState = uiState as PlayerScreenUiState.Success
+            val playerData = successState.playerData
+            val animeTitle = successState.animeTitle
+            val episodeNumber = successState.episodeNumber
+
             val context =
                 if (Build.VERSION.SDK_INT >= 30) LocalContext.current.createAttributionContext("playback") else LocalContext.current
             val lifecycleOwner = LocalLifecycleOwner.current
@@ -115,7 +119,7 @@ fun PlayerScreen(playerScreenViewModel: PlayerScreenViewModel = hiltViewModel())
 
             val dataSourceFactory = DefaultDataSource.Factory(
                 context,
-                (uiState as PlayerScreenUiState.Success).dataSourceFactory
+                successState.dataSourceFactory
             )
             val exoPlayer = remember {
                 ExoPlayer.Builder(context)
@@ -323,6 +327,8 @@ fun PlayerScreen(playerScreenViewModel: PlayerScreenViewModel = hiltViewModel())
                         currentPosition = currentPosition,
                         videoDuration = videoDuration,
                         playerData = playerData,
+                        animeTitle = animeTitle,
+                        episodeNumber = episodeNumber,
                         onPlayPause = {
                             if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                         },
@@ -354,6 +360,8 @@ fun PlayerControls(
     currentPosition: Long,
     videoDuration: Long,
     playerData: PlayerData,
+    animeTitle: String,
+    episodeNumber: Int,
     currentQuality: String,
     currentSubtitles: String?,
     onPlayPause: () -> Unit,
@@ -384,6 +392,14 @@ fun PlayerControls(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
+            Text(
+                text = "$animeTitle - ep $episodeNumber",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
