@@ -80,9 +80,9 @@ class PlayerScreenViewModel @Inject constructor(
         _uiState.value = PlayerScreenUiState.Loading
         try {
             val anime = anime ?: throw IllegalArgumentException("Anime not found")
-            val episodes = player?.episodes ?: emptyList()
-            val currentEpisodeIndex = episodes.indexOfFirst { it.videoId == episodeId }
-            val currentEpisode = episodes.getOrNull(currentEpisodeIndex)
+
+
+            val currentEpisode = player?.episodes?.firstOrNull { it.videoId == episodeId }
                 ?: throw IllegalArgumentException("Episode not found")
 
             val iframeUrl = "https:${currentEpisode.iframeUrl}"
@@ -105,7 +105,7 @@ class PlayerScreenViewModel @Inject constructor(
                 playerData = playerData,
                 dataSourceFactory = headersToDatasource(playerData.headers),
                 animeTitle = anime.title ?: "",
-                episodeNumber = if (currentEpisodeIndex != -1) currentEpisodeIndex + 1 else 1
+                episodeNumber = currentEpisode.title
             )
         } catch (e: Exception) {
             Log.e("PlayerScreenViewModel", "Error loading player data: ${e.message}", e)
@@ -127,7 +127,7 @@ sealed interface PlayerScreenUiState {
         val playerData: PlayerData,
         val dataSourceFactory: DataSource.Factory,
         val animeTitle: String,
-        val episodeNumber: Int
+        val episodeNumber: String
     ) : PlayerScreenUiState
 
     data class Error(val message: String) : PlayerScreenUiState

@@ -349,7 +349,7 @@ fun PlayerScreen(playerScreenViewModel: PlayerScreenViewModel = hiltViewModel())
         }
 
         is PlayerScreenUiState.Error -> {
-            // Show error message
+
         }
     }
 }
@@ -361,7 +361,7 @@ fun PlayerControls(
     videoDuration: Long,
     playerData: PlayerData,
     animeTitle: String,
-    episodeNumber: Int,
+    episodeNumber: String,
     currentQuality: String,
     currentSubtitles: String?,
     onPlayPause: () -> Unit,
@@ -392,14 +392,28 @@ fun PlayerControls(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
+
+            val maxTitleLength = 25
+            val displayTitle = if (animeTitle.length > maxTitleLength) {
+                "${animeTitle.take(maxTitleLength / 2)}...${animeTitle.takeLast(maxTitleLength / 2)}"
+            } else {
+                animeTitle
+            }
+
             Text(
-                text = "$animeTitle - ep $episodeNumber",
+                text = "$displayTitle - ep $episodeNumber",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             )
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
